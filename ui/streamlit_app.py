@@ -3,9 +3,9 @@ import streamlit as st
 
 API_URL = st.sidebar.text_input("API URL", "http://api:8000")
 
-st.title("Agentic RAG UI (LangGraph + Ollama)")
+st.title("Agentic RAG UI (Upload and ingest here)")
 
-st.header("Ingest document")
+st.header("Ingest document (UI upload)")
 upload = st.file_uploader("Upload document", type=["pdf", "docx", "pptx", "html", "md", "txt"])
 if st.button("Ingest file", use_container_width=True):
     if upload is None:
