@@ -7,6 +7,11 @@ from app.rag.embeddings import EmbeddingService
 from app.rag.llm import OllamaClient
 from app.rag.vector_store import VectorStore
 
+try:
+    from langfuse import Langfuse
+except Exception:  # pragma: no cover
+    Langfuse = None
+
 
 class AgentState(TypedDict):
     question: str
@@ -20,6 +25,16 @@ class AgenticRAG:
         self.store = VectorStore()
         self.llm = OllamaClient()
         self.graph = self._build_graph()
+        self.langfuse = self._build_langfuse_client()
+
+    def _build_langfuse_client(self):
+        if not Langfuse or not settings.langfuse_public_key or not settings.langfuse_secret_key:
+            return None
+        return Langfuse(
+            public_key=settings.langfuse_public_key,
+            secret_key=settings.langfuse_secret_key,
+            host=settings.langfuse_host,
+        )
 
     def _retrieve(self, state: AgentState) -> AgentState:
         qvec = self.embedder.embed_query(state["question"])
@@ -50,6 +65,9 @@ class AgenticRAG:
         return graph.compile()
 
     def ask(self, question: str) -> tuple[str, list[str]]:
+        trace = self.langfuse.trace(name="rag_ask", input={"question": question}) if self.langfuse else None
         out = self.graph.invoke({"question": question, "contexts": [], "answer": ""})
         sources = sorted({c["source"] for c in out["contexts"]})
+        if trace:
+            trace.update(output={"answer": out["answer"], "sources": sources})
         return out["answer"], sources

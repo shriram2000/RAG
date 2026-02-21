@@ -1,76 +1,63 @@
 # Agentic RAG (Open Source, Production-Oriented)
 
-This repository provides an end-to-end **agentic RAG** blueprint where every major runtime component is open source and deployable in production.
+This repository provides an end-to-end **agentic RAG** stack using fully open-source building blocks and includes the components you asked for:
 
-## What is included
-
-- **API + orchestration**: FastAPI + LangGraph
-- **LLM runtime**: Ollama (e.g., Llama 3.1 model)
-- **Embeddings**: SentenceTransformers (BGE family)
-- **Vector database**: Qdrant
-- **State/cache**: Redis
-- **Metadata DB**: PostgreSQL
-- **Object storage**: MinIO
-- **Observability**: Prometheus + Grafana
-- **Container orchestration (local/prod-like)**: Docker Compose
+- **Agentic orchestration**: LangGraph
+- **Reasoning model runtime**: Ollama
+- **UI**: Streamlit
+- **Document parsing (with image-aware extraction)**: Docling
+- **Vector DB**: FAISS
+- **Tracing/observability for LLM flows**: Langfuse
+- **Internet data ingestion**: URL download + local folder storage before indexing
 
 ## Architecture
 
-1. Documents are uploaded to `/ingest`.
-2. The API extracts text, chunks it, generates embeddings, and stores vectors in Qdrant.
-3. User questions hit `/chat`.
-4. A LangGraph agent executes:
-   - Retrieve relevant chunks from Qdrant.
-   - Grounded generation through Ollama.
-5. API returns an answer + source attribution.
+1. Upload files from Streamlit or API `/ingest`.
+2. Or ingest internet content from `/ingest/url` (downloads into `data/downloads`).
+3. Docling parses source documents into markdown text (image references preserved in parser output).
+4. Text is chunked, embedded (SentenceTransformers), and indexed in FAISS.
+5. LangGraph agent retrieves top chunks and asks Ollama for grounded answers.
+6. Optional traces are sent to Langfuse when keys are configured.
 
 ## Quickstart
 
 ```bash
 cp .env.example .env
-
 docker compose up -d --build
 ```
 
-Pull a model in Ollama:
+Pull an Ollama model:
 
 ```bash
 docker exec -it ollama ollama pull llama3.1:8b
 ```
 
-API docs:
-- http://localhost:8000/docs
+Open services:
 
-Prometheus:
-- http://localhost:9090
+- API docs: http://localhost:8000/docs
+- Streamlit UI: http://localhost:8501
+- Langfuse: http://localhost:3001
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000
 
-Grafana:
-- http://localhost:3000
-
-## Production notes
-
-- Replace Compose with Kubernetes (Helm/Kustomize).
-- Add authn/authz (OIDC/API keys + tenant isolation).
-- Add background workers (Celery/Arq) for ingestion and retries.
-- Configure Qdrant replication/sharding and backups.
-- Use TLS and secrets manager (Vault/SOPS/KMS).
-- Add reranker and guardrails (e.g., bge-reranker + policy checks).
-- Add trace telemetry (OpenTelemetry + Tempo/Jaeger).
-
-## API
+## API Endpoints
 
 ### `POST /ingest`
-Upload a PDF and index chunks.
+Upload file and index it.
+
+### `POST /ingest/url`
+```json
+{ "url": "https://example.com" }
+```
+Downloads internet content to `data/downloads/` and indexes it.
 
 ### `POST /chat`
 ```json
-{ "question": "What does the policy say about retention?" }
+{ "question": "What does the document say?" }
 ```
 
-Returns:
-```json
-{
-  "answer": "...",
-  "sources": ["policy.pdf"]
-}
-```
+## Notes
+
+- FAISS is local-file backed (`data/index`).
+- URL ingestion is useful for building a continuously updated internet-fed knowledge folder.
+- For production: move ingestion to background workers and add auth, retry queues, and model/reranker routing.
