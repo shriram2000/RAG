@@ -6,30 +6,39 @@ This repository provides an end-to-end **agentic RAG** stack using fully open-so
 - **Reasoning model runtime**: Ollama
 - **UI (primary workflow)**: Streamlit
 - **Document parsing (with image-aware extraction)**: Docling
-- **Vector DB**: FAISS
-- **Tracing/observability for LLM flows**: Langfuse
+- **Vector DB**: FAISS (local file-based)
+- **Tracing/observability for LLM flows**: Langfuse (optional)
 - **Internet data ingestion**: URL download + local folder storage before indexing
 
-## One-command setup
+## No-Docker setup (recommended)
 
-Run this script to set up everything (env file, folders, containers, and Ollama model):
+You can run everything locally **without Docker**.
+
+### 1) Install and prepare environment
 
 ```bash
 ./setup.sh
 ```
 
+### 2) Start API + UI
+
+```bash
+./start_local.sh
+```
+
+Open:
+
+- Streamlit UI (upload here): http://localhost:8501
+- API docs: http://localhost:8000/docs
+
 ## Use Streamlit for uploading files (recommended)
 
-You asked to upload in the UI. ✅
-
-Use the **Streamlit UI** as the main place to ingest files and URLs:
-
 1. Open **http://localhost:8501**
-2. In **Ingest document**, choose your file and click **Ingest file**
+2. In **Ingest document (UI upload)**, choose your file and click **Ingest file**
 3. (Optional) In **Ingest internet URL**, paste URL and click **Download + index URL**
 4. Ask questions in **Ask a question**
 
-> The API endpoints still exist for automation/integrations, but for normal usage upload via Streamlit UI.
+> API endpoints still exist for automation/integrations, but normal usage should be through Streamlit UI.
 
 ## Architecture
 
@@ -39,27 +48,6 @@ Use the **Streamlit UI** as the main place to ingest files and URLs:
 4. Text is chunked, embedded (SentenceTransformers), and indexed in FAISS.
 5. LangGraph agent retrieves top chunks and asks Ollama for grounded answers.
 6. Optional traces are sent to Langfuse when keys are configured.
-
-## Quickstart
-
-```bash
-cp .env.example .env
-docker compose up -d --build
-```
-
-Pull an Ollama model:
-
-```bash
-docker exec -it ollama ollama pull llama3.1:8b
-```
-
-Open services:
-
-- API docs: http://localhost:8000/docs
-- Streamlit UI (upload here): http://localhost:8501
-- Langfuse: http://localhost:3001
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000
 
 ## API Endpoints (optional for integrations)
 
@@ -81,4 +69,4 @@ Downloads internet content to `data/downloads/` and indexes it.
 
 - FAISS is local-file backed (`data/index`).
 - URL ingestion is useful for building a continuously updated internet-fed knowledge folder.
-- For production: move ingestion to background workers and add auth, retry queues, and model/reranker routing.
+- If Ollama is not installed, install from `https://ollama.com/download`.
